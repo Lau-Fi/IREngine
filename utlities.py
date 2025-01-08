@@ -1,8 +1,9 @@
+# we need to import the from nltk stopwords and the stemmer which we will use the Porter Stemmer method for.
 from nltk.corpus import stopwords
 from nltk import PorterStemmer
-from nltk.stem import WordNetLemmatizer
 
 
+#remove stopwords function will remove the stopwords from the tokens, stopwords are words such as "and", "or" etc
 def remove_stopwords(tokens):
     stop_words = set(stopwords.words('english'))
     filtered_tokens = []
@@ -11,6 +12,7 @@ def remove_stopwords(tokens):
             filtered_tokens.append(word)
     return filtered_tokens
 
+#this will stem the words bringing words back to their root etomology such as running - run.
 def stemmer(tokens):
     stemmer = PorterStemmer()
     stemmed = []

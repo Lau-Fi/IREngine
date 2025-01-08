@@ -18,32 +18,41 @@ N = len(docIDs)
     we would be calculating the query vector each time we run it,
     making it a redundant calculation and slowing down the code.
     """
+#the get query vector function takes in the user's query tokens and the number of documents
 def get_query_vector(query_tokens, N):
     query_vector = [0]*len(vocab.keys())
+    #defines the query vector as the amount of vocabulary filled with 0s
     for term in query_tokens:
         count = 0
         try:
             term_ID = vocab[term]
+            #we use a try and accept for the program to still work even if a user query is not in vocab
         except:
             print(f"Not found {term}")
             continue
-        print(f"{term_ID}, {term}")
+        #print(f"{term_ID}, {term}")
         postings_term = postings[term_ID]
         for query_term in query_tokens:
             if query_term == term:
                 count+=1
         wtq = (1+math.log(count))*math.log(N/len(postings_term))
+        #we calulate the word term query by calculating similary to the tfidf score
         query_vector[term_ID] = wtq
     return query_vector
 
-
+#we can get the cosine score with this function. The parameters are the query vector and the document vector
 def cosine_score_get(query_vector, document_vector):
     results_vector = [0]*len(query_vector)
+    #the results vector is created and pre-populated with 0s
     for i in range(len(query_vector)):
         results_vector[i] = query_vector[i]*document_vector[i]
+    #to calculate we multiply the query and document tfidf vectors together to get the cosine score
     return sum(results_vector)/get_length(document_vector)*get_length(query_vector)
-        
+    #and then we return the sum of the results vector we calulated divided by the 
+    # square rooted added square numbers of document*query vectors 
 
+#this function does other part of the calculation, used for both vectors - squaring each number summed in the vector 
+#and the square-rooting that entire sum of squared numbers.
 def get_length(vector):
     sum_squares = 0
     for number in vector:
@@ -66,7 +75,12 @@ while True:  #loop for user query
         querylist = ut.stemmer(querylist)
     
     ranked_docs = []
+    
 
+    
+    #this choice is the simplest method of calulating the total tfidf it does not use the query vector but instead
+    #just adds the tfidf scores for each word in the user query together to calculate the precision - less precise 
+    #than the other two methods
     if choice == "a":
         stored_wordtfids = []
         for word in querylist:
@@ -86,6 +100,16 @@ while True:  #loop for user query
             ranked_docs.append(docIDs[docID])
         print(ranked_docs[:10])
 
+    
+    #basic loops for choice B+C choice 
+        # loop over document_vectors in count_matrix_transpose.
+        # we can use the DocIDS for that
+        # for each document_vector:
+        # calculate cosine simularity between document vector and query vector
+        # store the results in scores at position: documentID
+        # use scores to get a ranked list of documents
+    
+    #this method uses the vector space model for weighting it is more accurate compared to method A
     elif choice == "b":
         scores = []
         query_tfidfs = get_query_vector(querylist, N)
@@ -94,38 +118,27 @@ while True:  #loop for user query
             cosine_calculate = cosine_score_get(query_tfidfs, doc_tfidfs)
             scores.append(cosine_calculate)
                                                                                        
-        # loop over document_vectors in count_matrix_transpose.
-        # we can use the DocIDS for that
-        # for each document_vector:
-        # calculate cosine simularity between document vector and query vector
-        # store the results in scores at position: documentID
-        # use scores to get a ranked list of documents
+        
         scores = np.array(scores)
         ranked_docIDS = np.argsort(-scores)
         print(ranked_docIDS)
         for doc_ID in ranked_docIDS:
             ranked_docs.append(f'{doc_ID}: {docIDs[doc_ID]}')
         print(ranked_docs[:10])
-        
+
+    #Method c uses both the cosine similarity from B along with user relevance feedback, to more accurately 
+    #enhance the results.    
     elif choice == "c":
         scores = []
         augmented_scores = []
         query_tfidfs = get_query_vector(querylist, N)
         tfidf_matrix_flipped = tfidf_matrix.T
+        #We transpose (or flip) the matrix as it is created the other way around.
 
-
-
-        
         for doc_tfidfs in tfidf_matrix_flipped:
             cosine_calculate = cosine_score_get(query_tfidfs, doc_tfidfs)
             scores.append(cosine_calculate)
                                                                                        
-        # loop over document_vectors in count_matrix_transpose.
-        # we can use the DocIDS for that
-        # for each document_vector:
-        # calculate cosine simularity between document vector and query vector
-        # store the results in scores at position: documentID
-        # use scores to get a ranked list of documents
         scores = np.array(scores)
         ranked_docIDS = np.argsort(-scores)
         print(ranked_docIDS)
@@ -162,18 +175,3 @@ while True:  #loop for user query
 
 
 
-
-#list 3 different techniques in order to improve the work.
-
-#THREE DIFFERENT METHODS OF IMPLEMENTING BELOW - and compare in video presentation.
-#We need the program to enable ranking of the documents with multiple query words, taking them all into account. 
-# Furthermore, we have to return only the top 10 most relevent documents.
-#We can use cosine ranking to get documents more close to the query.
-#We can create a short dynamic summary below each HTML file title, highlighting the query word and its sentence - 
-# maybe with 10 words or one sentence between the query word? (Keyword in Context)
-#We need to take metadata into account such as the genre, this can be useful for ranking, 
-# such as displaying documents with the same genre.
-###
-#Remove stop words? - partially complete
-
-#and then... We are done! 
