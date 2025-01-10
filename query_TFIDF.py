@@ -1,4 +1,4 @@
-import json, math, pickle
+import math, pickle
 import utlities as ut
 import numpy as np
 with open('docids.pkl', 'rb') as f: 
@@ -89,12 +89,13 @@ while True:  #loop for user query
                 wordID = vocab[word]
                 #step 2: get wordID array from tfIDF scores
                 word_tfidfs = tfidf_matrix[wordID]
-                if len(stored_wordtfids) != 0:
-                    added_final_tfidfs = stored_wordtfids+word_tfidfs
-                stored_wordtfids = word_tfidfs
+                if len(stored_wordtfids) == 0:
+                    stored_wordtfids = word_tfidfs
+                else:
+                    stored_wordtfids+=word_tfidfs
 
         #step 3: argsort tfidf docIDS
-        ranked_docIDs_by_tfidfs = np.argsort(added_final_tfidfs)
+        ranked_docIDs_by_tfidfs = np.argsort(stored_wordtfids)
         #step 4: use docid keys to get value
         for docID in ranked_docIDs_by_tfidfs:
             ranked_docs.append(docIDs[docID])
@@ -171,7 +172,6 @@ while True:  #loop for user query
         
         #Could be faster if we calculate only the top 10 rather than cutting the list.
         print(relevant_ranked_docs[:10])
-
 
 
 
