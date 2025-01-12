@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from matplotlib_venn import venn2
 from matplotlib import pyplot as plt
+import time
 
 with open('docids.pkl', 'rb') as f: 
     docIDs = pickle.load(f)
@@ -71,6 +72,11 @@ choices = ["a", "b", "c"]
 relevance_feedbacks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 outputs = [] #the outputs list, each query word and the pages it appears on.
+query_times_a = []
+query_times_b = []
+query_times_c = []
+
+
 for query in queries:
     query_outputs = {}
     for choice in choices:
@@ -92,6 +98,7 @@ for query in queries:
     #than the other two methods
         
         if choice == "a":
+            start = time.time()
             stored_wordtfids = []
             for word in querylist:
                 if word in vocab.keys():
@@ -110,7 +117,9 @@ for query in queries:
             for docID in ranked_docIDs_by_tfidfs:
                 ranked_docs.append(docIDs[docID])
             query_outputs["a"] = ranked_docs[:10]
-
+            end = time.time()
+            record_a = end-start
+            query_times_a.append(record_a)
 
         
         #basic loops for choice B+C choice 
@@ -123,6 +132,7 @@ for query in queries:
         
         #this method uses the vector space model for weighting it is more accurate compared to method A
         elif choice == "b":
+            start = time.time()
             scores = []
             query_tfidfs = get_query_vector(querylist, N)
             tfidf_matrix_flipped = tfidf_matrix.T
@@ -134,13 +144,20 @@ for query in queries:
             scores = np.array(scores)
             ranked_docIDS = np.argsort(-scores)
             #print(ranked_docIDS)
+
+
             for doc_ID in ranked_docIDS:
                 ranked_docs.append(f'{doc_ID}: {docIDs[doc_ID]}')
             query_outputs["b"] = ranked_docs[:10]
+            end = time.time()
+            record_b = end-start
+            query_times_b.append(record_b)
+
 
         #Method c uses both the cosine similarity from B along with user relevance feedback, to more accurately 
         #enhance the results.    
         elif choice == "c":
+            start = time.time()
             scores = []
             augmented_scores = []
             query_tfidfs = get_query_vector(querylist, N)
@@ -183,8 +200,17 @@ for query in queries:
             
             #Could be faster if we calculate only the top 10 rather than cutting the list.
             query_outputs["c"] = relevant_ranked_docs[:10]
+            end = time.time()
+            record_c = end-start
+            query_times_c.append(record_c)
+
     outputs.append(query_outputs)
 print(outputs)
+
+
+
+
+
 golden_standards = {"ICO": [], "Okami": [], "Devil Kings": [], "Dynasty Warriors": [], 
            "Sports Genre Games": [], "Hunting Genre Games": [], "Game Developed by Eurocom": [], 
            "Game Published by Activision": [], "Game Published by Sony Computer Entertainment": [], "Teen PS2 Games": []}
@@ -246,47 +272,140 @@ for abc_dict in outputs:
     only_b.append(abc_dict.get("b"))
     only_c.append(abc_dict.get("c"))
 
-
-count = 0
-for k in b_dict.keys():
-    b_dict[k] = only_b[count]
-    count+=1
     
 print("-----------------------------")    
 
 print(b_dict)
 print(golden_standards)
-unique_b_len = 0
-unique_gd_len = 0
-shared_len = 0
 
-for key in b_dict.keys():
-    venn_set1 = set(b_dict[key])
-    venn_set2 = set(golden_standards[key])
-    
-    unique_b = venn_set1 - venn_set2
-    unique_gd = venn_set2 - venn_set1
-    shared = venn_set1 & venn_set2
+shared_counts = {}
+unique_batch_counts = {}
+unique_golden_counts = {}
 
-    unique_b_len += len(unique_b)
-    unique_gd_len += len(unique_gd)
-    shared_len += len(shared)
+select_venn_test = input("Select tfidf method - A, B or C: ")
+select_venn_test.lower()
+
+if select_venn_test == "b":
+    count = 0
+    for k in b_dict.keys():
+        b_dict[k] = only_b[count]
+        count+=1
 
 
+    for key in set(b_dict.keys()).union(golden_standards.keys()):
+        batch_docs = b_dict.get(key, [])
+        golden_docs = golden_standards.get(key, [])
+        
+        batch_cleaned = {doc.split(': ')[-1] for doc in batch_docs}
+        golden_cleaned = set(golden_docs)
+        
+        shared = batch_cleaned & golden_cleaned
+        unique_batch = batch_cleaned - golden_cleaned
+        unique_golden = golden_cleaned - batch_cleaned
+        
+        shared_counts[key] = len(shared)
+        unique_batch_counts[key] = len(unique_batch)
+        unique_golden_counts[key] = len(unique_golden)
 
-print(f"------------------Unique to b dictionary: {unique_b_len}")
-print(f"Unique to golden dictionary: {unique_gd_len}")
-print(f"shared between both: {shared_len}")
+    total_shared = sum(shared_counts.values())
+    total_unique_batch = sum(unique_batch_counts.values())
+    total_unique_golden = sum(unique_golden_counts.values())
 
-venn = venn2 (subsets= (unique_b_len, unique_gd_len, shared_len))
+    plt.figure(figsize=(8, 8))
+    venn = venn2(subsets=(total_unique_batch, total_unique_golden, total_shared),
+                    set_labels=("False Positives", "False Negatives", "True Positives"))
+    plt.title("Comparison of User Queries vs Golden Standard")
+    plt.show()
+if select_venn_test == "a": 
+    count = 0
+    for k in a_dict.keys():
+        a_dict[k] = only_a[count]
+        count+=1
+
+    for key in set(a_dict.keys()).union(golden_standards.keys()):
+        batch_docs = a_dict.get(key, [])
+        golden_docs = golden_standards.get(key, [])
+        
+        batch_cleaned = {doc.split(': ')[-1] for doc in batch_docs}
+        golden_cleaned = set(golden_docs)
+        
+        shared = batch_cleaned & golden_cleaned
+        unique_batch = batch_cleaned - golden_cleaned
+        unique_golden = golden_cleaned - batch_cleaned
+        
+        shared_counts[key] = len(shared)
+        unique_batch_counts[key] = len(unique_batch)
+        unique_golden_counts[key] = len(unique_golden)
+
+    total_shared = sum(shared_counts.values())
+    total_unique_batch = sum(unique_batch_counts.values())
+    total_unique_golden = sum(unique_golden_counts.values())
+
+    plt.figure(figsize=(8, 8))
+    venn = venn2(subsets=(total_unique_batch, total_unique_golden, total_shared),
+                    set_labels=("False Positives", "False Negatives", "True Positives"))
+    plt.title("Comparison of User Queries vs Golden Standard")
+    plt.show()
+
+if select_venn_test == "c":
+    count = 0
+    for k in c_dict.keys():
+        c_dict[k] = only_c[count]
+        count+=1
+
+    for key in set(c_dict.keys()).union(golden_standards.keys()):
+        batch_docs = c_dict.get(key, [])
+        golden_docs = golden_standards.get(key, [])
+        
+        batch_cleaned = {doc.split(': ')[-1] for doc in batch_docs}
+        golden_cleaned = set(golden_docs)
+        
+        shared = batch_cleaned & golden_cleaned
+        unique_batch = batch_cleaned - golden_cleaned
+        unique_golden = golden_cleaned - batch_cleaned
+        
+        shared_counts[key] = len(shared)
+        unique_batch_counts[key] = len(unique_batch)
+        unique_golden_counts[key] = len(unique_golden)
+
+    total_shared = sum(shared_counts.values())
+    total_unique_batch = sum(unique_batch_counts.values())
+    total_unique_golden = sum(unique_golden_counts.values())
+
+    plt.figure(figsize=(8, 8))
+    venn = venn2(subsets=(total_unique_batch, total_unique_golden, total_shared),
+                    set_labels=("False Positives", "False Negatives", "True Positives"))
+    plt.title("Comparison of User Queries vs Golden Standard")
+    plt.show()
+total_time_A = sum(query_times_a)
+total_time_B = sum(query_times_b)
+total_time_C = sum(query_times_c)
+
+total_times = [total_time_A, total_time_B, total_time_C]
+
+tags = ["TFIDF Calculation Type A", "TFIDF Calculation Type B", "TFIDF Calculation Type C"]
+
+#plt.bar(tags, total_times)
+fig, ax = plt.subplots()
+bars = ax.bar(tags, total_times)
+ax.bar_label(bars)
+plt.title("Time to run each TFIDF Calculation compared between the 3 methods of calculation")
+plt.xlabel("Method Types")
+plt.ylabel("Time (In Seconds)")
 plt.show()
+
+top10_tfidfmatrix = np.sort(tfidf_matrix_flipped, axis=None)[-10:][::-1]
+
+#CREATE PIE CHART WITH top10_tfidfmatrix
+
+
+
+
+
 
 #What I want:
 
-#Venn diagram to compare actual results vs golden standard
-#Bar chart with each method and the times it takes - compare this without the stopwords and lemmatisation
-#A recorder of how long it takes
-#A chart to determine which html page has the highest tfidf score.
+#A chart to determine which html page or word has the highest tfidf score.
 #Compare the metadata
 #Create flyer for different processes of information retriveal.
 #Record the powerpoint with all of the tests on it

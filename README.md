@@ -25,4 +25,5 @@ Instructions to run
     - To end the process - just press Enter on the query search input.
 
 4. The batch_query_TFIDF works in a similar way to the regular query_TFIDF, but has automated queries rather than a user input.
-   This is to allow fast testing and generating graphs for the presentation. It runs automatically.
+   This is to allow fast testing and generating graphs for the presentation. It will generate each new graph subsequentially once you close the previous graph. For generating the Venn Diagram, you can choose the method for calculating. A = Adding TFIDF scores (simplest method), B = Cosine Similarity Matrix, C = Cosine Similarity Matrix with Relevance Feedback (enhancing first entry automatically for the batch query). 
+
