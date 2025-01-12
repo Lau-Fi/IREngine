@@ -39,7 +39,7 @@ postings = {}
 htmltexts = {}
 
 #we can use a dictionary to turn on or off the stopwords and stemming for testing the query with or without them
-test_config = {"stopwords": False, "stemming": False}
+test_config = {"stopwords": True, "stemming": True}
 
 #the tokenisnor takes in the html page text for each document in the videogames corpus and returns the 
 # paragraph and/or div words, in a tokenised state without punctuation, in a lower case and without stopwords.
